@@ -20,6 +20,7 @@ import sys
 
 from dimod.generators.constraints import combinations
 from hybrid.reference import KerberosSampler
+from dwave.system.samplers import LeapHybridSampler
 
 
 def get_label(row, col, digit):
@@ -86,24 +87,22 @@ def is_correct(matrix):
     return True
 
 
-def main():
-    # Note: for the purposes of a code example, main() is written as a script 
+def print_sudoku(matrix):
+    for line in matrix:
+        print(*line, sep=" ")  # Print list without commas or brackets
 
-    # Read user input
-    if len(sys.argv) > 1:
-        filename = sys.argv[1]
+    # Verify
+    if is_correct(matrix):
+        print("The solution is correct")
     else:
-        filename = "problem.txt"
-        print("Warning: using default problem file, '{}'. Usage: python "
-              "{} <sudoku filepath>".format(filename, sys.argv[0]))
+        print("The solution is incorrect")
 
-    # Read sudoku problem
-    matrix = get_matrix(filename)
 
+def sudoku_bqm(matrix):
     # Set up
-    n = len(matrix)          # Number of rows/columns in sudoku
-    m = int(math.sqrt(n))    # Number of rows/columns in sudoku subsquare
-    digits = range(1, n+1)
+    n = len(matrix)  # Number of rows/columns in sudoku
+    m = int(math.sqrt(n))  # Number of rows/columns in sudoku subsquare
+    digits = range(1, n + 1)
 
     bqm = dimod.BinaryQuadraticModel({}, {}, 0.0, dimod.SPIN)
 
@@ -164,26 +163,36 @@ def main():
                 # selected.
                 bqm.fix_variable(get_label(row, col, value), 1)
 
+    return bqm
+
+
+def main():
+    # Note: for the purposes of a code example, main() is written as a script 
+
+    # Read user input
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = "problem.txt"
+        print("Warning: using default problem file, '{}'. Usage: python "
+              "{} <sudoku filepath>".format(filename, sys.argv[0]))
+
+    # Read sudoku problem
+    matrix = get_matrix(filename)
+    bqm = sudoku_bqm(matrix)
+
     # Solve BQM
     solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)
-    best_solution = solution.first.sample
+    # solution = LeapHybridSampler().sample(bqm, time_limit=15)
+    best_solution = solution.lowest().first.sample
 
     # Print solution
     solution_list = [k for k, v in best_solution.items() if v == 1]
-
     for label in solution_list:
         coord, digit = label.split('_')
         row, col = map(int, coord.split(','))
         matrix[row][col] = int(digit)
-
-    for line in matrix:
-        print(*line, sep=" ")   # Print list without commas or brackets
-
-    # Verify
-    if is_correct(matrix):
-        print("The solution is correct")
-    else:
-        print("The solution is incorrect")
+    print_sudoku(matrix)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ import sys
 from dimod.generators.constraints import combinations
 from hybrid.reference import KerberosSampler
 from dwave.system.samplers import LeapHybridSampler
+from tabu import TabuSampler
 
 
 def get_label(row, col, digit):
@@ -184,6 +185,7 @@ def main():
     # Solve BQM
     solution = KerberosSampler().sample(bqm, max_iter=10, convergence=3)
     # solution = LeapHybridSampler().sample(bqm, time_limit=15)
+    # solution = TabuSampler().sample(bqm)
     best_solution = solution.lowest().first.sample
 
     # Print solution
